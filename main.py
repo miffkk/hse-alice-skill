@@ -6,6 +6,30 @@ app = FastAPI()
 
 GREETINGS = ["hello", "hi", "hey", "start", "привет", "здравствуй", "начать"]
 
+# Слой Small Talk для естественного общения
+SMALL_TALK = [
+    {
+        "triggers": ["how are you", "how do you feel", "your feelings", "как дела", "как ты", "чувства"],
+        "answer": "I don't have feelings, but I'm fully ready to help you navigate HSE life! What would you like to know?"
+    },
+    {
+        "triggers": ["my name is", "i am", "меня зовут", "мое имя", "я "],
+        "answer": "Nice to meet you! How can I help you with HSE studies, exams, or student life today?"
+    },
+    {
+        "triggers": ["who are you", "what are you", "кто ты", "что ты умеешь"],
+        "answer": "I am the HSE International Student Assistant. I can explain grading rules, exams, visas, dorms, and campus life."
+    },
+    {
+        "triggers": ["thank", "thanks", "спасибо", "благодарю"],
+        "answer": "You are very welcome! Let me know if you need anything else regarding HSE regulations."
+    },
+    {
+        "triggers": ["bye", "goodbye", "пока", "до свидания"],
+        "answer": "Goodbye and best of luck with your studies at HSE!"
+    }
+]
+
 KB = [
     {
         "keywords": ["placement test", "entry test", "placement", "входное", "входной", "тестирование"],
@@ -210,16 +234,20 @@ KB = [
 ]
 
 def find_answer(query: str) -> str:
-    cleaned = re.sub(r"[^\w\s]", " ", (query or "").lower())
+    raw_query = (query or "").lower().strip()
+    cleaned = re.sub(r"[^\w\s]", " ", raw_query)
     words = set(cleaned.split())
 
-    if not words:
+    if not words or any(g in words for g in GREETINGS):
         return "Hello! I am your HSE International Assistant. Ask me anything about grading, visas, dorms, or exams!"
 
-    if any(g in words for g in GREETINGS):
-        return "Hello! I am your HSE International Assistant. Ask me anything about grading, visas, dorms, or exams!"
+    # Проверка на Small Talk
+    for talk in SMALL_TALK:
+        for trig in talk["triggers"]:
+            if trig in raw_query or trig in cleaned:
+                return talk["answer"]
 
-    # 1. Точный поиск по фразе
+    # 1. Поиск по полному совпадению ключевой фразы
     for item in KB:
         for kw in item["keywords"]:
             if kw.lower() in cleaned:
@@ -240,7 +268,7 @@ def find_answer(query: str) -> str:
     if max_matches > 0 and best_match:
         return best_match
 
-    return "I couldn't find an exact match in the HSE regulations. Try asking about grading, exams, dorms, or visas."
+    return "I am focused on HSE regulations. Try asking about grading, exams, dorms, or student visas!"
 
 @app.post("/webhook")
 async def alice_endpoint(request: Request):
